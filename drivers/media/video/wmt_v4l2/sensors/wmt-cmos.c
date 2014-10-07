@@ -332,8 +332,8 @@ struct wmt_fmt {
 
 static struct wmt_fmt formats[] = {
 	{
-		.name     = "4:2:2, packed, YUYV",
-		.fourcc   = V4L2_PIX_FMT_YUYV,
+		.name     = "4:2:0, packed, NV21",
+		.fourcc   = V4L2_PIX_FMT_NV21,
 		.depth    = 16,
 	},
 };
