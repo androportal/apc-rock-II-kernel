@@ -1,54 +1,68 @@
+# How to build kernel from source
 
-How to build kernel from source:
+## Development environment
 
-Development environment used:
-
-- Ubuntu 12.04 - i686
-- Kernel version for development environment: 3.16.1
-
-
---------------------------
+* Ubuntu 12.04 - i686
+* Kernel version for development environment was: 3.16.1
 
 
-- Required packages:
+## Required packages
 
+```
   sudo apt-get install autoconf2.13 bison bzip2 ccache curl flex gawk gcc g++ g++-mul tilib git lib32ncurses5-dev lib32z1-dev libgl1-mesa-dev libx11-dev make zip
+```
 
-- Download(or clone) toolchain from https://github.com/apc-io/apc-rock-toolchain
+* Download(or clone) toolchain from [here](https://github.com/apc-io/apc-rock-toolchain)
 
+```
   git clone https://github.com/apc-io/apc-rock-toolchain
+```
+Download Config file from [here](https://gist.github.com/psachin/b9290c796d57a8cc7f3f#file-wm8880-config-3-4-5)
 
-- Export environment variables in ~/.bashrc file
+* Export environment variables in `~/.bashrc` file
 
+```
   # apc toolchain
   export PATH=/home/USERNAME/PATH-TO/apc-rock-toolchain/mybin:$PATH
+```
 
-- Download or clone this repository
+* Download or clone this repository
 
+```
   git clone https://github.com/psachin/apc-rock-II-kernel.git
+```
 
-- Now visit the kernel source directory and issue following commmands
+* Now visit the kernel source directory and issue following commands
 
+```
   cd apc-rock-II-kernel
   make mrproper
   make distclean
   make Android_defconfig
   make ARCH=arm CROSS_COMPILE=arm_1103_le- ubin -j4
+```
 
-- Compile modules and copy them to 'out' directory
+* Compile modules and copy them to `out` directory
 
+```
   make ARCH=arm CROSS_COMPILE=arm_1103_le- INSTALL_MOD_PATH=out modules
   make ARCH=arm CROSS_COMPILE=arm_1103_le- INSTALL_MOD_PATH=out modules_install
+```
 
-- Now copy 'uImage.bin' to '/boot' directory of SD-card.
-- copy directory 'out/lib/modules/3.4.5+  to SD-card's '/rootfs' directory path '/lib/modules/'
+* Now copy `uImage.bin` to '/boot' directory of SD-card. Copy directory `out/lib/modules/3.4.5+`  to SD-card's `/rootfs/lib/modules/`
 
-- Now create symbolic link to Mali modules in the directory '/lib/modules/'
+* Now create symbolic link to Mali modules in the directory `/lib/modules/`
 
+```
   ln -s /lib/module/3.4.5+/kernel/drivers/gpu/drm/mali/mali/mali_drm.ko mali_drm.ko
   ln -s /lib/module/3.4.5+/kernel/drivers/gpu/drm/mali/mali/mali.ko mali.ko
   ln -s /lib/module/3.4.5+/kernel/drivers/gpu/drm/mali/ump/ump.ko ump.ko
+```
 
+## Compiling and configuring libv4l2 library.
+(The patch is already merged into the kernel)
+
+Please follow [this](https://gist.github.com/psachin/7d223edd74f3e1bf3ff9) link
 
 
 =============================================================
