@@ -23,6 +23,7 @@
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
+#include <linux/mfd/core.h>
 #include <linux/init.h>
 #include <linux/delay.h>
 #include <linux/pm.h>
@@ -177,7 +178,17 @@ static const u16 vt1603_regs[] = {
 	0x001b,
 };
 
+/* codec private data */
+struct vt1603_priv {
+	int (*reg_read)(struct vt1603 *vt1603, u8 reg, u8 *val);
+	int (*reg_write)(struct vt1603 *vt1603, u8 reg, u8 val);
+	unsigned int sysclk;
+	enum snd_soc_control_type control_type;
+	void *control_data;
+	struct spi_device *spi;
+};
 
+struct vt1603_priv *pvt1603;
 static int vt1603_spi_write_then_read(struct spi_device *spi,
 		const u8 *txbuf, unsigned n_tx,
 		u8 *rxbuf, unsigned n_rx)
@@ -227,6 +238,40 @@ static int vt1603_spi_write_then_read(struct spi_device *spi,
 		kfree(local_buf);
 
 	return status;
+}
+
+static int vt1603_spi_write(struct vt1603 *vt1603, u8 reg, u8 val)
+{
+        int ret = 0;
+        u8 xfer[3] = { 0 };
+        struct spi_device *spi = pvt1603->spi;
+
+        xfer[0] = ((reg & 0xff) | 0x80);
+        xfer[1] = ((reg & 0xff) >> 7);
+        xfer[2] = val & 0xff;
+        ret = spi_write(spi, xfer, ARRAY_SIZE(xfer));
+        if (ret != 0)
+                pr_err("vt1603_spi_write[r:%d, v:%d] errcode[%d]\n", reg, val, ret);
+
+        return ret;
+}
+
+static int vt1603_spi_read(struct vt1603 *vt1603, u8 reg, u8 *val)
+{
+        u8 addr[3] = { 0 };
+        u8 data[3] = { 0 };
+        int ret = 0;
+        struct spi_device *spi = pvt1603->spi;
+
+        addr[0] = ((reg & 0xff) & (~ 0x80));
+        addr[1] = ((reg & 0xff) >> 7);
+        addr[2] = 0xff;
+        ret = vt1603_spi_write_then_read(spi, addr, 2, data, 3);
+        if(ret != 0)
+                pr_err("vt1603_spi_read[r:%d] errcode[%d]\n", reg, ret);
+
+        *val = data[2];
+        return ret;
 }
 
 static int vt1603_write(struct snd_soc_codec *codec, 
@@ -1256,14 +1301,6 @@ static const struct _coeff_div coeff_div[] = {
 	{12288000, 96000, 128, 0x1, 0x04},
 };
 
-/* codec private data */
-struct vt1603_priv {
-	unsigned int sysclk;
-	enum snd_soc_control_type control_type;
-	void *control_data;
-	struct spi_device *spi;
-};
-
 static inline int get_coeff(int mclk, int rate)
 {
 	int i;
@@ -1847,6 +1884,42 @@ static struct snd_soc_codec_driver soc_codec_dev_vt1603 = {
 	.num_dapm_routes = ARRAY_SIZE(audio_map),*/
 };
 
+static int vt1603_mfd_init(struct vt1603_priv *vt1603)
+{
+        int ret;
+        struct mfd_cell cell[] = {
+                {
+                        .name = "vt1603-codec",
+                        .platform_data = vt1603,
+                        .pdata_size = sizeof(*vt1603),
+                },
+                {
+                        .name = "vt1603-touch",
+                        .platform_data = vt1603,
+                        .pdata_size = sizeof(*vt1603),
+                },
+                {
+                        .name = "vt1603-batt",
+                        .platform_data = vt1603,
+                        .pdata_size = sizeof(*vt1603),
+                },
+        };
+
+        ret = mfd_add_devices(&vt1603->spi->dev, -1,
+                                cell, ARRAY_SIZE(cell),
+                                NULL, 0);
+        if (ret != 0) {
+                pr_err("vt1603_mfd_init error: %d\n", ret);
+                goto err;
+        }
+        return 0;
+
+err:
+        mfd_remove_devices(&vt1603->spi->dev);
+        kfree(vt1603);
+        return ret;
+}
+
 static int __devinit vt1603_spi_probe(struct spi_device *spi)
 {
 	struct vt1603_priv *vt1603;
@@ -1862,8 +1935,12 @@ static int __devinit vt1603_spi_probe(struct spi_device *spi)
 
 	spi_set_drvdata(spi, vt1603);
 	vt1603->control_type = SND_SOC_SPI;
+	vt1603->reg_write = vt1603_spi_write;
+	vt1603->reg_read = vt1603_spi_read;
 	vt1603->spi = spi;
+	pvt1603 = vt1603;
 
+	vt1603_mfd_init(vt1603);
 	ret = snd_soc_register_codec(&spi->dev,
 			&soc_codec_dev_vt1603, &vt1603_dai, 1);
 
