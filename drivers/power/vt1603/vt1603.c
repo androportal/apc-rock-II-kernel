@@ -218,7 +218,7 @@ static bool g2214_is_charging_full(void)
 
 static int vt1603_bat_read_status(struct vt1603_device_info *di, int *intval)
 {
-	if (power_supply_am_i_supplied(&di->ps_bat)) {
+	if (wmt_charger_is_dc_plugin()) {
 		if (di->capacity == 100 || wmt_charger_is_charging_full() || 
 				g2214_is_charging_full())
 			*intval = POWER_SUPPLY_STATUS_FULL;

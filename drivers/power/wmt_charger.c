@@ -75,15 +75,7 @@ static int parse_charger_param(struct wmt_charger *wc)
 	active = mode = pc_charging = 0;
 
 	enable = s[0] - '0';
-
-	p = strchr(s, ':');p++;
-	if (strncmp(p, "gpio", 4)) {
-		pr_err("Not gpio charger\n");
-		return -ENODEV;
-	}
-	
-	p = strchr(p, ':');p++;
-	rc = sscanf(p, "%d:%d:%d:%d:%d", &type, &gpio, &active, &mode, &pc_charging);
+	rc = sscanf(s, "%d:%d:%d:%d:%d", &type, &gpio, &active, &mode, &pc_charging);
 	if (rc < 1) {
 		pr_err("Bad uboot env: %s %s\n", env, s);
 		return -EINVAL;
