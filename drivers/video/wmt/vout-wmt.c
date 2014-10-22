@@ -950,6 +950,7 @@ const char *vout_sys_parm_str[] = {"wmt.display.param", "wmt.display.param2"};
 int vout_check_display_info(struct vout_init_parm_t *init_parm)
 {
 	char buf[100];
+	const char *display_param[] = { "2:0:24:1024:600:60", "4:0:24:1024:600:60" };
 	int varlen = 100;
 	unsigned int parm[10];
 	vout_t *vo = 0;
@@ -961,9 +962,7 @@ int vout_check_display_info(struct vout_init_parm_t *init_parm)
 
 	/* [uboot parameter] display param : type:op1:op2:resx:resy:fps */
 	for (i = 0; i < 2; i++) {
-		if (wmt_getsyspara((char *)vout_sys_parm_str[i], buf, &varlen))
-			continue;
-
+		strncpy(buf, display_param[i], 19);
 		DBG_MSG("display param %d : %s\n", i, buf);
 		vpp_parse_param(buf, (unsigned int *)parm, 6, 0);
 		MSG("boot parm vo %d opt %d,%d, %dx%d@%d\n", parm[0],
