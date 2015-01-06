@@ -333,6 +333,9 @@ unsigned int wmt_version;
 uint32_t par1_ofs, par2_ofs, par3_ofs, par4_ofs, eslc_write, prob_end;
 #include <linux/mtd/partitions.h>
 #define NUM_NAND_PARTITIONS ARRAY_SIZE(nand_partitions)
+
+#if 0
+// NAND partition scheme for older hardware
 struct mtd_partition nand_partitions[] = {
 	{
 		.name		= "logo",
@@ -376,6 +379,27 @@ struct mtd_partition nand_partitions[] = {
 	}
 };
 EXPORT_SYMBOL(nand_partitions);
+#else
+// NAND partition scheme for new hardware
+struct mtd_partition nand_partitions[] = {
+	{
+		.name		= "ubuntu-logo",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= 0x1000000,
+	},
+	{
+		.name		= "ubuntu-boot",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= 0x1000000,
+	},
+	{
+		.name		= "ubuntu-rootfs",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= MTDPART_SIZ_FULL,
+	},
+};
+EXPORT_SYMBOL(nand_partitions);
+#endif
 
 int second_chip = 0;
 EXPORT_SYMBOL(second_chip);
