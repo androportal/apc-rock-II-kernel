@@ -1,0 +1,53 @@
+From d8e1b68ecea0dba0d0927b60d63fdc209e9421cc Mon Sep 17 00:00:00 2001
+From: Manish Patel <manish.patel@xzadium.com>
+Date: Mon, 20 Oct 2014 15:33:47 +0530
+Subject: [PATCH 4/4] Subject: Fix charger and battery issue on netbook
+
+Description:
+
+	1. Charger is now being detected by netbook
+	2. Now battery is showing correct status
+
+Signed-off-by: Manish Patel <manish.patel@xzadium.com>
+---
+ drivers/power/vt1603/vt1603.c |  2 +-
+ drivers/power/wmt_charger.c   | 10 +---------
+ 2 files changed, 2 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/power/vt1603/vt1603.c b/drivers/power/vt1603/vt1603.c
+index a55c0cc..c21e3e7 100644
+--- a/drivers/power/vt1603/vt1603.c
++++ b/drivers/power/vt1603/vt1603.c
+@@ -218,7 +218,7 @@ static bool g2214_is_charging_full(void)
+ 
+ static int vt1603_bat_read_status(struct vt1603_device_info *di, int *intval)
+ {
+-	if (power_supply_am_i_supplied(&di->ps_bat)) {
++	if (wmt_charger_is_dc_plugin()) {
+ 		if (di->capacity == 100 || wmt_charger_is_charging_full() || 
+ 				g2214_is_charging_full())
+ 			*intval = POWER_SUPPLY_STATUS_FULL;
+diff --git a/drivers/power/wmt_charger.c b/drivers/power/wmt_charger.c
+index 5efcda6..dc3ebbf 100644
+--- a/drivers/power/wmt_charger.c
++++ b/drivers/power/wmt_charger.c
+@@ -75,15 +75,7 @@ static int parse_charger_param(struct wmt_charger *wc)
+ 	active = mode = pc_charging = 0;
+ 
+ 	enable = s[0] - '0';
+-
+-	p = strchr(s, ':');p++;
+-	if (strncmp(p, "gpio", 4)) {
+-		pr_err("Not gpio charger\n");
+-		return -ENODEV;
+-	}
+-	
+-	p = strchr(p, ':');p++;
+-	rc = sscanf(p, "%d:%d:%d:%d:%d", &type, &gpio, &active, &mode, &pc_charging);
++	rc = sscanf(s, "%d:%d:%d:%d:%d", &type, &gpio, &active, &mode, &pc_charging);
+ 	if (rc < 1) {
+ 		pr_err("Bad uboot env: %s %s\n", env, s);
+ 		return -EINVAL;
+-- 
+1.8.3.2
+

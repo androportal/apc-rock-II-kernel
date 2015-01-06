@@ -1,0 +1,43 @@
+From c1d490f1bde962bb7f572d22be444a81e67cf255 Mon Sep 17 00:00:00 2001
+From: Manish Patel <manish.patel@xzadium.com>
+Date: Thu, 16 Oct 2014 18:54:54 +0530
+Subject: [PATCH] Fix HDMI issue on Netbook
+
+Signed-off-by: Manish Patel <manish.patel@xzadium.com>
+---
+ drivers/video/wmt/wmtfb.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/video/wmt/wmtfb.c b/drivers/video/wmt/wmtfb.c
+index bf48cef..bac0973 100644
+--- a/drivers/video/wmt/wmtfb.c
++++ b/drivers/video/wmt/wmtfb.c
+@@ -1996,6 +1996,7 @@ int vpp_set_par(struct fb_info *info)
+ {
+ 	vout_info_t *vo_info;
+ 	unsigned int mask;
++	int i;
+ 
+ 	if (g_vpp.hdmi_certify_flag)
+ 		return 0;
+@@ -2008,7 +2009,8 @@ int vpp_set_par(struct fb_info *info)
+ 
+ 	vpp_set_mutex(info->node, 1);
+ 
+-	vo_info = vout_info_get_entry(info->node);
++for (i = 0; i < VPP_VOUT_INFO_NUM; i++) {
++	vo_info = vout_info_get_entry(i);
+ 	mask = vout_get_mask(vo_info);
+ 
+ 	/* set frame buffer */
+@@ -2067,6 +2069,7 @@ int vpp_set_par(struct fb_info *info)
+ 			vout_config(mask, vo_info, &var);
+ 		}
+ 	}
++}
+ 	vpp_set_mutex(info->node, 0);
+ 	return 0;
+ }
+-- 
+1.8.3.2
+

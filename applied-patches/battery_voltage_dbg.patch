@@ -1,0 +1,89 @@
+diff --git a/drivers/power/vt1603/vt1603.c b/drivers/power/vt1603/vt1603.c
+index a55c0cc..5266ff4 100644
+--- a/drivers/power/vt1603/vt1603.c
++++ b/drivers/power/vt1603/vt1603.c
+@@ -143,16 +143,19 @@ static int vt1603_read_volt(struct vt1603 *vt1603)
+ 	} while (timeout--);
+ 
+ 	if (!timeout) {
++		printk("battery_voltage  | %s() +%d | Fail... | wait adc end timeout ..\n", __func__, __LINE__);
+ 		pr_err("wait adc end timeout ?!\n");
+ 		return -ETIMEDOUT;
+ 	}
+ 
+ 	ret = vt1603_get_bat_data(vt1603, &value);
+ 	if (ret < 0) {
++		printk("battery_voltage  | %s() +%d | Fail... | vt1603 get bat adc data Failed!..\n", __func__, __LINE__);
+ 		pr_err("vt1603 get bat adc data Failed!\n");
+ 		return ret;
+ 	}
+ 
++	printk("battery_voltage  | %s() +%d | value: %d\n", __func__, __LINE__, value);
+ 	return value;
+ }
+ 
+@@ -174,8 +177,12 @@ static int vt1603_manual_read_adc(struct vt1603 *vt1603)
+ 
+ 	for (i = 0; i < 4; i++) {
+ 		ret = vt1603_read_volt(vt1603);
++		printk("battery_voltage  | %s() +%d | ret: %d\n", __func__, __LINE__, ret);
+ 		if (ret < 0)
++		{
++			printk("battery_voltage  | %s() +%d | Fail.....\n", __func__, __LINE__);
+ 			break;
++		}
+ 		sum += ret;
+ 
+ 		vt1603_setbits(vt1603, VT1603_INTS_REG, BIT0);
+@@ -184,6 +191,7 @@ static int vt1603_manual_read_adc(struct vt1603 *vt1603)
+ 	vt1603_clrbits(vt1603, VT1603_INTCR_REG, BIT7);
+ 	vt1603_setbits(vt1603, VT1603_INTS_REG, BIT0 | BIT3);
+ 	vt1603_set_reg8(vt1603, VT1603_CR_REG, BIT1);
++	printk("battery_voltage  | %s() +%d | ret: %d sum: %d\n", __func__, __LINE__, ret, sum);
+ 
+ 	return (ret < 0) ? ret : (sum >> 2);
+ }
+@@ -195,11 +203,17 @@ static inline int volt_reg_to_mV(int value)
+ 
+ static int vt1603_bat_read_voltage(struct vt1603_device_info *di, int *intval)
+ {
++	printk("battery_voltage  | %s() +%d | voltage: %d\n", __func__, __LINE__, *intval);
+ 	int ret = vt1603_manual_read_adc(di->vt1603);
+ 	if (ret < 0)
++	{
++		printk("battery_voltage  | %s() +%d | Fail.....  \n", __func__, __LINE__);
+ 		return ret;
++	}
+ 
++	printk("battery_voltage  | %s() +%d | voltage: %d | ret: %d\n", __func__, __LINE__, *intval, ret);
+ 	*intval = volt_reg_to_mV(ret);
++	printk("battery_voltage  | %s() +%d | voltage: %d\n", __func__, __LINE__, *intval);
+ 	return 0;
+ }
+ 
+@@ -218,14 +232,23 @@ static bool g2214_is_charging_full(void)
+ 
+ static int vt1603_bat_read_status(struct vt1603_device_info *di, int *intval)
+ {
+-	if (power_supply_am_i_supplied(&di->ps_bat)) {
++//	if (power_supply_am_i_supplied(&di->ps_bat)) {
++	if (wmt_charger_is_dc_plugin()) {
++		printk("charger_dbg | %s() +%d | Ac charger is deteced\n", __func__, __LINE__);
+ 		if (di->capacity == 100 || wmt_charger_is_charging_full() || 
+ 				g2214_is_charging_full())
++		{
+ 			*intval = POWER_SUPPLY_STATUS_FULL;
+-		else
++			printk("charger_dbg | %s() +%d | battery_status: %s\n", __func__, __LINE__, (*intval == POWER_SUPPLY_STATUS_FULL ? "full":"unknown"));
++		} else
++		{
+ 			*intval = POWER_SUPPLY_STATUS_CHARGING;
++			printk("charger_dbg | %s() +%d | battery_status: %s\n", __func__, __LINE__, (*intval == POWER_SUPPLY_STATUS_CHARGING ? "charging":"unknown"));
++		}
+ 	} else {
++		printk("charger_dbg | %s() +%d | Ac charger is removed\n", __func__, __LINE__);
+ 		*intval = POWER_SUPPLY_STATUS_DISCHARGING;
++		printk("charger_dbg | %s() +%d | battery_status: %s\n", __func__, __LINE__, (*intval == POWER_SUPPLY_STATUS_DISCHARGING ? "discharging":"unknown"));
+ 	}
+ 	return batt_leds_update(*intval);
+ }

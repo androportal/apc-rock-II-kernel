@@ -1,0 +1,182 @@
+diff --git a/drivers/mtd/devices/wmt_sf.c b/drivers/mtd/devices/wmt_sf.c
+index 02ec6c3..26c18b6 100644
+--- a/drivers/mtd/devices/wmt_sf.c
++++ b/drivers/mtd/devices/wmt_sf.c
+@@ -112,11 +112,13 @@ extern int wmt_setsyspara(char *varname, char *varval);
+ 		.offset         = 0x00FD0000,
+ 		.size           = 0x00010000,
+ 	},
++#if 0
+ 	{
+ 		.name           = "u-boot env. cfg. 2-SF",
+ 		.offset         = 0x00FE0000,
+ 		.size           = 0x00010000,
+ 	},
++#endif
+ 	{
+ 		.name           = "w-load-SF",
+ 		.offset         = 0x00FF0000,
+diff --git a/drivers/mtd/nand/wmt_nand.c b/drivers/mtd/nand/wmt_nand.c
+index ae1c71e..617f8cc 100644
+--- a/drivers/mtd/nand/wmt_nand.c
++++ b/drivers/mtd/nand/wmt_nand.c
+@@ -333,6 +333,8 @@ unsigned int wmt_version;
+ uint32_t par1_ofs, par2_ofs, par3_ofs, par4_ofs, eslc_write, prob_end;
+ #include <linux/mtd/partitions.h>
+ #define NUM_NAND_PARTITIONS ARRAY_SIZE(nand_partitions)
++
++#if 0
+ struct mtd_partition nand_partitions[] = {
+ 	{
+ 		.name		= "logo",
+@@ -376,6 +378,28 @@ struct mtd_partition nand_partitions[] = {
+ 	}
+ };
+ EXPORT_SYMBOL(nand_partitions);
++#else
++struct mtd_partition nand_partitions[] = {
++	{
++		.name		= "ubuntu-logo",
++		.offset		= MTDPART_OFS_APPEND,
++		.size		= 0x1000000,
++	},
++	{
++		.name		= "ubuntu-boot",
++		.offset		= MTDPART_OFS_APPEND,
++		.size		= 0x1000000,
++	},
++	{
++		.name		= "ubuntu-rootfs",
++		.offset		= MTDPART_OFS_APPEND,
++		.size		= MTDPART_SIZ_FULL,
++		//.size		= 0x1FE000000,
++	},
++};
++EXPORT_SYMBOL(nand_partitions);
++
++#endif
+ 
+ int second_chip = 0;
+ EXPORT_SYMBOL(second_chip);
+diff --git a/drivers/mtd/ubi/eba.c b/drivers/mtd/ubi/eba.c
+index 5501b5a..60c115a 100644
+--- a/drivers/mtd/ubi/eba.c
++++ b/drivers/mtd/ubi/eba.c
+@@ -1545,6 +1545,7 @@ int ubi_eba_init(struct ubi_device *ubi, struct ubi_attach_info *ai)
+ 		if (ubi->avail_pebs < ubi->beb_rsvd_level) {
+ 			/* No enough free physical eraseblocks */
+ 			ubi->beb_rsvd_pebs = ubi->avail_pebs;
++			printk("ubi_dbg : %s() +%d | avail_peb: %d\n", __func__, __LINE__, ubi->avail_pebs);
+ 			print_rsvd_warning(ubi, ai);
+ 		} else
+ 			ubi->beb_rsvd_pebs = ubi->beb_rsvd_level;
+diff --git a/drivers/mtd/wmt_env.c b/drivers/mtd/wmt_env.c
+index 00ef506..0ffa778 100644
+--- a/drivers/mtd/wmt_env.c
++++ b/drivers/mtd/wmt_env.c
+@@ -196,7 +196,7 @@ static unsigned int env_crc32(unsigned char	*buf)
+ 	return crc ^ 0xffffffff;
+ }
+ 
+-int read_env_before_mtd_init(int uenv[2], int bootflash, unsigned int offset[2])
++int read_env_before_mtd_init(int uenv[1], int bootflash, unsigned int offset[2])
+ {
+ 	int env, err, i;
+ 	unsigned int crc32;
+@@ -213,7 +213,7 @@ int read_env_before_mtd_init(int uenv[2], int bootflash, unsigned int offset[2])
+ 		#endif
+ 	}
+ 
+-	for (i = 0; i < 2; i++) {
++	for (i = 0; i < 1; i++) {
+ 	env = uenv[i];
+ 	if ((!mtd_table[0]) && (env != ENV_INVALID)) {
+ 		#ifdef CONFIG_MTD_WMT_SF
+@@ -232,6 +232,7 @@ int read_env_before_mtd_init(int uenv[2], int bootflash, unsigned int offset[2])
+ 				if (env_ptr->crc == crc32) {
+ 					env_valid = env;
+ 					env_valid_offs = offset[i];
++#if 0
+ 					if (env_valid == uenv[0]) {
+ 						env_invalid = uenv[1];
+ 						env_invalid_offs = offset[1];
+@@ -239,6 +240,7 @@ int read_env_before_mtd_init(int uenv[2], int bootflash, unsigned int offset[2])
+ 						env_invalid = uenv[0];
+ 						env_invalid_offs = offset[0];
+ 					}
++#endif
+ 					iounmap(io_base);
+ 					return 0;
+ 				} else {
+@@ -328,7 +330,7 @@ int read_env_after_mtd_init(void)
+ 
+ static unsigned int env_init(void)
+ {
+-	int i, ret, count = 0, uenv[2];
++	int i, ret, count = 0, uenv[1];
+ 	size_t retvarlen;
+ 	unsigned char mtd_dev[20];
+ 	unsigned int offset[2];
+@@ -342,31 +344,31 @@ static unsigned int env_init(void)
+ 	ENV_MAX_SIZE = 64*1024;
+ 
+ 	boot_str1 = SF_UBOOT_ENV1;
+-	boot_str2 = SF_UBOOT_ENV2;
++	//boot_str2 = SF_UBOOT_ENV2;
+ 	if ((val&0x4000) == 0) {
+ 		bootflash = EMMC_FLASH_TYPE;
+ 		boot_str1 = EMMC_UBOOT_ENV1;
+-		boot_str2 = EMMC_UBOOT_ENV2;
++		//boot_str2 = EMMC_UBOOT_ENV2;
+ 	} else if ((val&0x4008) == 0x4000) {
+ 		bootflash = SPI_FLASH_TYPE;
+ 		boot_str1 = SF_UBOOT_ENV1;
+-		boot_str2 = SF_UBOOT_ENV2;		
++	//	boot_str2 = SF_UBOOT_ENV2;		
+ 	} else if ((val&0x400E) == 0x4008) {
+ 		bootflash = NAND_FLASH_TYPE;
+ 		boot_str1 = NAND_UBOOT_ENV1;
+-		boot_str2 = NAND_UBOOT_ENV2;
++	//	boot_str2 = NAND_UBOOT_ENV2;
+ 	} else if ((val&0x400E) == 0x400A) {
+ 		bootflash = ROM_EMMC_FLASH_TYPE;
+ 		boot_str1 = EMMC_UBOOT_ENV1;
+-		boot_str2 = EMMC_UBOOT_ENV2;
++	//	boot_str2 = EMMC_UBOOT_ENV2;
+ 	} else if ((val&0x400E) == 0x400C) {
+ 		bootflash = SD_FLASH_TYPE;
+ 		boot_str1 = SD_UBOOT_ENV1;
+-		boot_str2 = SD_UBOOT_ENV2;
++	//	boot_str2 = SD_UBOOT_ENV2;
+ 	} else if ((val&0x400E) == 0x400E) {
+ 		bootflash = USB_FLASH_TYPE;
+ 		boot_str1 = USB_UBOOT_ENV1;
+-		boot_str2 = USB_UBOOT_ENV2;
++	//	boot_str2 = USB_UBOOT_ENV2;
+ 	}
+ 
+ 	/*mtd_for_each_device(mtd);
+@@ -410,6 +412,7 @@ static unsigned int env_init(void)
+ 			mtd_table[0] = mtd;
+ 			env1 = mtd_table[0]->index = mtd->index;
+ 		}
++#if 0
+ 		mtd = get_mtd_device_nm(boot_str2);
+ 		if (!IS_ERR(mtd)) {
+ 			mtd_init = 1;
+@@ -418,12 +421,14 @@ static unsigned int env_init(void)
+ 			env2 = mtd_table[1]->index = mtd->index;
+ 		}
+ 		for (i = 0; i < 2; i++)		
++#endif
++		for (i = 0; i < 1; i++)		
+ 			printk(KERN_WARNING "MTD dev%d size: 0x%8.8llx \"%s\"\n",
+ 			mtd_table[i]->index, mtd_table[i]->size, mtd_table[i]->name);
+ 	}
+ 
+ 	uenv[0] = env1;
+-	uenv[1] = env2;
++//	uenv[1] = env2;
+ 
+ 	if (bootflash == NAND_FLASH_TYPE) {
+ 		env = uenv[0];

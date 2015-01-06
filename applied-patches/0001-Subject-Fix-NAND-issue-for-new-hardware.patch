@@ -1,0 +1,74 @@
+From 18515b0f3651bfd2bfc26ed0a3e4ccf83801370d Mon Sep 17 00:00:00 2001
+From: Manish Patel <manish.patel@xzadium.com>
+Date: Tue, 6 Jan 2015 14:14:11 +0530
+Subject: [PATCH] Subject: Fix NAND issue for new hardware
+
+Description:
+
+	1. Changed partition scheme
+	2. Enabled mtdswap driver
+
+Signed-off-by: Manish Patel <manish.patel@xzadium.com>
+---
+ arch/arm/configs/Android_defconfig |  2 +-
+ drivers/mtd/nand/wmt_nand.c        | 24 ++++++++++++++++++++++++
+ 2 files changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/configs/Android_defconfig b/arch/arm/configs/Android_defconfig
+index f97e469..526470b 100644
+--- a/arch/arm/configs/Android_defconfig
++++ b/arch/arm/configs/Android_defconfig
+@@ -1001,7 +1001,7 @@ CONFIG_MTD_BLOCK=y
+ # CONFIG_SSFDC is not set
+ # CONFIG_SM_FTL is not set
+ # CONFIG_MTD_OOPS is not set
+-# CONFIG_MTD_SWAP is not set
++CONFIG_MTD_SWAP=y
+ 
+ #
+ # RAM/ROM/Flash chip drivers
+diff --git a/drivers/mtd/nand/wmt_nand.c b/drivers/mtd/nand/wmt_nand.c
+index ae1c71e..07f40aa 100644
+--- a/drivers/mtd/nand/wmt_nand.c
++++ b/drivers/mtd/nand/wmt_nand.c
+@@ -333,6 +333,9 @@ unsigned int wmt_version;
+ uint32_t par1_ofs, par2_ofs, par3_ofs, par4_ofs, eslc_write, prob_end;
+ #include <linux/mtd/partitions.h>
+ #define NUM_NAND_PARTITIONS ARRAY_SIZE(nand_partitions)
++
++#if 0
++// NAND partition scheme for older hardware
+ struct mtd_partition nand_partitions[] = {
+ 	{
+ 		.name		= "logo",
+@@ -376,6 +379,27 @@ struct mtd_partition nand_partitions[] = {
+ 	}
+ };
+ EXPORT_SYMBOL(nand_partitions);
++#else
++// NAND partition scheme for new hardware
++struct mtd_partition nand_partitions[] = {
++	{
++		.name		= "ubuntu-logo",
++		.offset		= MTDPART_OFS_APPEND,
++		.size		= 0x1000000,
++	},
++	{
++		.name		= "ubuntu-boot",
++		.offset		= MTDPART_OFS_APPEND,
++		.size		= 0x1000000,
++	},
++	{
++		.name		= "ubuntu-rootfs",
++		.offset		= MTDPART_OFS_APPEND,
++		.size		= MTDPART_SIZ_FULL,
++	},
++};
++EXPORT_SYMBOL(nand_partitions);
++#endif
+ 
+ int second_chip = 0;
+ EXPORT_SYMBOL(second_chip);
+-- 
+1.9.1
+

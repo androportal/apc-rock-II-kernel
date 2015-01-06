@@ -1,0 +1,64 @@
+diff --git a/drivers/power/vt1603/vt1603.c b/drivers/power/vt1603/vt1603.c
+index a55c0cc..d3b5f2a 100644
+--- a/drivers/power/vt1603/vt1603.c
++++ b/drivers/power/vt1603/vt1603.c
+@@ -218,14 +218,23 @@ static bool g2214_is_charging_full(void)
+ 
+ static int vt1603_bat_read_status(struct vt1603_device_info *di, int *intval)
+ {
+-	if (power_supply_am_i_supplied(&di->ps_bat)) {
++//	if (power_supply_am_i_supplied(&di->ps_bat)) {
++	if (wmt_charger_is_dc_plugin()) {
++		printk("charger_dbg | %s() +%d | Ac charger is deteced\n", __func__, __LINE__);
+ 		if (di->capacity == 100 || wmt_charger_is_charging_full() || 
+ 				g2214_is_charging_full())
++		{
+ 			*intval = POWER_SUPPLY_STATUS_FULL;
+-		else
++			printk("charger_dbg | %s() +%d | battery_status: %s\n", __func__, __LINE__, (*intval == POWER_SUPPLY_STATUS_FULL ? "full":"unknown"));
++		} else
++		{
+ 			*intval = POWER_SUPPLY_STATUS_CHARGING;
++			printk("charger_dbg | %s() +%d | battery_status: %s\n", __func__, __LINE__, (*intval == POWER_SUPPLY_STATUS_CHARGING ? "charging":"unknown"));
++		}
+ 	} else {
++		printk("charger_dbg | %s() +%d | Ac charger is removed\n", __func__, __LINE__);
+ 		*intval = POWER_SUPPLY_STATUS_DISCHARGING;
++		printk("charger_dbg | %s() +%d | battery_status: %s\n", __func__, __LINE__, (*intval == POWER_SUPPLY_STATUS_DISCHARGING ? "discharging":"unknown"));
+ 	}
+ 	return batt_leds_update(*intval);
+ }
+diff --git a/drivers/power/wmt_charger.c b/drivers/power/wmt_charger.c
+index 5efcda6..d6d66ca 100644
+--- a/drivers/power/wmt_charger.c
++++ b/drivers/power/wmt_charger.c
+@@ -75,15 +75,17 @@ static int parse_charger_param(struct wmt_charger *wc)
+ 	active = mode = pc_charging = 0;
+ 
+ 	enable = s[0] - '0';
+-
++#if 0
+ 	p = strchr(s, ':');p++;
+ 	if (strncmp(p, "gpio", 4)) {
+ 		pr_err("Not gpio charger\n");
+ 		return -ENODEV;
+ 	}
+-	
+ 	p = strchr(p, ':');p++;
+-	rc = sscanf(p, "%d:%d:%d:%d:%d", &type, &gpio, &active, &mode, &pc_charging);
++#endif
++	
++	rc = sscanf(s, "%d:%d:%d:%d:%d", &type, &gpio, &active, &mode, &pc_charging);
++	printk("charger_dbg | type: %d gpio: %d active: %d mode: %d pc_charging: %d\n", type, gpio, active, mode, pc_charging);
+ 	if (rc < 1) {
+ 		pr_err("Bad uboot env: %s %s\n", env, s);
+ 		return -EINVAL;
+@@ -101,7 +103,7 @@ static int parse_charger_param(struct wmt_charger *wc)
+ 		}
+ 	}
+ 
+-	pr_info("%s, gpio%d, active-%d, mode %d, pc_charging %d\n",
++	printk("%s, gpio%d, active-%d, mode %d, pc_charging %d\n",
+ 		type ? "Micro-USB" : "AC", gpio, active, mode, pc_charging);
+ 
+ 	wc->type = type;

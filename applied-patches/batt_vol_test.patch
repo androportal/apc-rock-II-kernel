@@ -1,0 +1,204 @@
+diff --git a/drivers/power/vt1603/vt1603.c b/drivers/power/vt1603/vt1603.c
+index a55c0cc..79e5608 100644
+--- a/drivers/power/vt1603/vt1603.c
++++ b/drivers/power/vt1603/vt1603.c
+@@ -1,7 +1,7 @@
+ /*
+  * vt1603.c - WonderMedia VT1603 Adc Battery Driver.
+  *
+- * Copyright (C) 2013  WonderMedia Technologies, Inc.  
++ * Copyright (C) 2013  WonderMedia Technologies, Inc.
+  *
+  * This program is free software; you can redistribute it and/or modify it
+  * under  the terms of the GNU General  Public License as published by the
+@@ -82,7 +82,9 @@ static int vt1603_read8(struct vt1603 *vt1603, u8 reg, u8 *data)
+ {
+ 	int ret = vt1603->reg_read(vt1603, reg, data);
+ 	if (ret)
+-		pr_err("vt1603 battery read error, errno%d\n", ret);
++		printk("charger_dbg: vt1603 battery read error, errno%d\n", ret);
++
++//		pr_err("vt1603 battery read error, errno%d\n", ret);
+ 	return ret;
+ }
+ 
+@@ -107,8 +109,10 @@ static int vt1603_get_bat_data(struct vt1603 *vt1603,int *data)
+ 
+ 	ret |= vt1603_read8(vt1603, VT1603_DATL_REG, &data_l);
+ 	ret |= vt1603_read8(vt1603, VT1603_DATH_REG, &data_h);
++	printk("charger_dbg_ret: %d, %d, %d\n", ret, data_l, data_h);
+ 
+ 	*data = ADC_DATA(data_l, data_h);
++	printk("charger_dbg_data: %d\n", data);
+ 	return ret;
+ }
+ 
+@@ -143,16 +147,19 @@ static int vt1603_read_volt(struct vt1603 *vt1603)
+ 	} while (timeout--);
+ 
+ 	if (!timeout) {
++		printk("battery_voltage  | %s() +%d | Fail... | wait adc end timeout ..\n", __func__, __LINE__);
+ 		pr_err("wait adc end timeout ?!\n");
+ 		return -ETIMEDOUT;
+ 	}
+ 
+ 	ret = vt1603_get_bat_data(vt1603, &value);
+ 	if (ret < 0) {
++		printk("battery_voltage  | %s() +%d | Fail... | vt1603 get bat adc data Failed!..\n", __func__, __LINE__);
+ 		pr_err("vt1603 get bat adc data Failed!\n");
+ 		return ret;
+ 	}
+ 
++	printk("battery_voltage  | %s() +%d | value: %d\n", __func__, __LINE__, value);
+ 	return value;
+ }
+ 
+@@ -174,8 +181,12 @@ static int vt1603_manual_read_adc(struct vt1603 *vt1603)
+ 
+ 	for (i = 0; i < 4; i++) {
+ 		ret = vt1603_read_volt(vt1603);
++		printk("battery_voltage  | %s() +%d | ret: %d\n", __func__, __LINE__, ret);
+ 		if (ret < 0)
++		{
++			printk("battery_voltage  | %s() +%d | Fail.....\n", __func__, __LINE__);
+ 			break;
++		}
+ 		sum += ret;
+ 
+ 		vt1603_setbits(vt1603, VT1603_INTS_REG, BIT0);
+@@ -184,6 +195,7 @@ static int vt1603_manual_read_adc(struct vt1603 *vt1603)
+ 	vt1603_clrbits(vt1603, VT1603_INTCR_REG, BIT7);
+ 	vt1603_setbits(vt1603, VT1603_INTS_REG, BIT0 | BIT3);
+ 	vt1603_set_reg8(vt1603, VT1603_CR_REG, BIT1);
++	printk("battery_voltage  | %s() +%d | ret: %d sum: %d\n", __func__, __LINE__, ret, sum);
+ 
+ 	return (ret < 0) ? ret : (sum >> 2);
+ }
+@@ -195,11 +207,17 @@ static inline int volt_reg_to_mV(int value)
+ 
+ static int vt1603_bat_read_voltage(struct vt1603_device_info *di, int *intval)
+ {
++	printk("battery_voltage  | %s() +%d | voltage: %d\n", __func__, __LINE__, *intval);
+ 	int ret = vt1603_manual_read_adc(di->vt1603);
+ 	if (ret < 0)
++	{
++		printk("battery_voltage  | %s() +%d | Fail.....  \n", __func__, __LINE__);
+ 		return ret;
++	}
+ 
++	printk("battery_voltage  | %s() +%d | voltage: %d | ret: %d\n", __func__, __LINE__, *intval, ret);
+ 	*intval = volt_reg_to_mV(ret);
++	printk("battery_voltage  | %s() +%d | voltage: %d\n", __func__, __LINE__, *intval);
+ 	return 0;
+ }
+ 
+@@ -207,7 +225,7 @@ static bool g2214_is_charging_full(void)
+ {
+ 	struct power_supply *status;
+ 	union power_supply_propval val_charger;
+-	
++
+ 	status = power_supply_get_by_name("charger");
+ 	if (!status)
+ 		return false;
+@@ -218,14 +236,23 @@ static bool g2214_is_charging_full(void)
+ 
+ static int vt1603_bat_read_status(struct vt1603_device_info *di, int *intval)
+ {
+-	if (power_supply_am_i_supplied(&di->ps_bat)) {
+-		if (di->capacity == 100 || wmt_charger_is_charging_full() || 
++//	if (power_supply_am_i_supplied(&di->ps_bat)) {
++	if (wmt_charger_is_dc_plugin()) {
++		printk("charger_dbg | %s() +%d | Ac charger is deteced\n", __func__, __LINE__);
++		if (di->capacity == 100 || wmt_charger_is_charging_full() ||
+ 				g2214_is_charging_full())
++		{
+ 			*intval = POWER_SUPPLY_STATUS_FULL;
+-		else
++			printk("charger_dbg | %s() +%d | battery_status: %s\n", __func__, __LINE__, (*intval == POWER_SUPPLY_STATUS_FULL ? "full":"unknown"));
++		} else
++		{
+ 			*intval = POWER_SUPPLY_STATUS_CHARGING;
++			printk("charger_dbg | %s() +%d | battery_status: %s\n", __func__, __LINE__, (*intval == POWER_SUPPLY_STATUS_CHARGING ? "charging":"unknown"));
++		}
+ 	} else {
++		printk("charger_dbg | %s() +%d | Ac charger is removed\n", __func__, __LINE__);
+ 		*intval = POWER_SUPPLY_STATUS_DISCHARGING;
++		printk("charger_dbg | %s() +%d | battery_status: %s\n", __func__, __LINE__, (*intval == POWER_SUPPLY_STATUS_DISCHARGING ? "discharging":"unknown"));
+ 	}
+ 	return batt_leds_update(*intval);
+ }
+diff --git a/sound/soc/codecs/vt1603.c b/sound/soc/codecs/vt1603.c
+index 0ba4084..4767edb 100644
+--- a/sound/soc/codecs/vt1603.c
++++ b/sound/soc/codecs/vt1603.c
+@@ -1,20 +1,20 @@
+-/*++ 
++/*++
+  * linux/sound/soc/codecs/vt1603.c
+  * WonderMedia audio driver for ALSA
+  *
+  * Copyright c 2010  WonderMedia  Technologies, Inc.
+  *
+- * This program is free software: you can redistribute it and/or modify 
+- * it under the terms of the GNU General Public License as published by 
+- * the Free Software Foundation, either version 2 of the License, or 
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 2 of the License, or
+  * (at your option) any later version.
+  *
+- * This program is distributed in the hope that it will be useful, 
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+- * GNU General Public License for more details. 
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
+  *
+- * You should have received a copy of the GNU General Public License 
++ * You should have received a copy of the GNU General Public License
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  *
+  * WonderMedia Technologies, Inc.
+@@ -257,7 +257,7 @@ static int vt1603_spi_write(struct vt1603 *vt1603, u8 reg, u8 val)
+ }
+ 
+ static int vt1603_spi_read(struct vt1603 *vt1603, u8 reg, u8 *val)
+-{
++{       printk("charger_dbg: inside vt1603_spi_read\n");
+         u8 addr[3] = { 0 };
+         u8 data[3] = { 0 };
+         int ret = 0;
+@@ -271,10 +271,11 @@ static int vt1603_spi_read(struct vt1603 *vt1603, u8 reg, u8 *val)
+                 pr_err("vt1603_spi_read[r:%d] errcode[%d]\n", reg, ret);
+ 
+         *val = data[2];
++	printk("charger_dbg_voltage_now: %d\n", *val);
+         return ret;
+ }
+ 
+-static int vt1603_write(struct snd_soc_codec *codec, 
++static int vt1603_write(struct snd_soc_codec *codec,
+ 		unsigned int reg, unsigned int value)
+ {
+ 	unsigned char data[3];
+@@ -631,7 +632,7 @@ static int vt1603_set_default_setting(struct snd_soc_codec *codec)
+ static int vt1603_set_default_route(struct snd_soc_codec *codec)
+ {
+ 	u16 reg;
+-	
++
+ 	DBG_DETAIL();
+ 
+ 	// disable EQ
+@@ -662,7 +663,7 @@ static int vt1603_set_default_route(struct snd_soc_codec *codec)
+ 	}
+ 	reg &= ~(BIT6 | BIT7);
+ 	snd_soc_write(codec, VT1603_R63, reg);
+-	
++
+ 	//-------------------------------------------
+ 
+ 	// enable microphone bias
