@@ -1,20 +1,20 @@
-/*++ 
+/*++
  * linux/sound/soc/codecs/vt1603.c
  * WonderMedia audio driver for ALSA
  *
  * Copyright c 2010  WonderMedia  Technologies, Inc.
  *
- * This program is free software: you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License as published by 
- * the Free Software Foundation, either version 2 of the License, or 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
  * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
- * GNU General Public License for more details. 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License 
+ * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * WonderMedia Technologies, Inc.
@@ -257,7 +257,7 @@ static int vt1603_spi_write(struct vt1603 *vt1603, u8 reg, u8 val)
 }
 
 static int vt1603_spi_read(struct vt1603 *vt1603, u8 reg, u8 *val)
-{
+{       printk("charger_dbg: inside vt1603_spi_read\n");
         u8 addr[3] = { 0 };
         u8 data[3] = { 0 };
         int ret = 0;
@@ -271,10 +271,11 @@ static int vt1603_spi_read(struct vt1603 *vt1603, u8 reg, u8 *val)
                 pr_err("vt1603_spi_read[r:%d] errcode[%d]\n", reg, ret);
 
         *val = data[2];
+	printk("charger_dbg_voltage_now: %d\n", *val);
         return ret;
 }
 
-static int vt1603_write(struct snd_soc_codec *codec, 
+static int vt1603_write(struct snd_soc_codec *codec,
 		unsigned int reg, unsigned int value)
 {
 	unsigned char data[3];
@@ -631,7 +632,7 @@ static int vt1603_set_default_setting(struct snd_soc_codec *codec)
 static int vt1603_set_default_route(struct snd_soc_codec *codec)
 {
 	u16 reg;
-	
+
 	DBG_DETAIL();
 
 	// disable EQ
@@ -662,7 +663,7 @@ static int vt1603_set_default_route(struct snd_soc_codec *codec)
 	}
 	reg &= ~(BIT6 | BIT7);
 	snd_soc_write(codec, VT1603_R63, reg);
-	
+
 	//-------------------------------------------
 
 	// enable microphone bias
