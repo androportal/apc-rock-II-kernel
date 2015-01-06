@@ -1112,24 +1112,24 @@ static void vt1603_do_timer_work(struct work_struct *work)
 	//DBG_DETAIL();
 
 	if (flag & VT1603_INT_HP_DETECT) {
-		printk("VT1603_INT_HP_DETECT\n");
+		//printk("VT1603_INT_HP_DETECT\n");
 		vt1603_hp_classd_switch(codec);
 		vt1603_irq_mask_reset(codec, VT1603_INT_HP_DETECT);
 	}
 
 	if (flag & VT1603_INT_LINEIN_DETECT) {
-		printk("VT1603_INT_LINEIN_DETECT\n");
+		//printk("VT1603_INT_LINEIN_DETECT\n");
 		//vt1603_mic_line_switch(codec);
 		vt1603_irq_mask_reset(codec, VT1603_INT_LINEIN_DETECT);
 	}
 
 	if (flag & VT1603_INT_CLASSD_LOCP) {
-		printk("VT1603_INT_CLASSD_LOCP\n");
+		//printk("VT1603_INT_CLASSD_LOCP\n");
 		vt1603_irq_mask_reset(codec, VT1603_INT_CLASSD_LOCP);
 	}
 
 	if (flag & VT1603_INT_CLASSD_ROCP) {
-		printk("VT1603_INT_CLASSD_ROCP\n");
+		//printk("VT1603_INT_CLASSD_ROCP\n");
 		vt1603_irq_mask_reset(codec, VT1603_INT_CLASSD_ROCP);
 	}
 
